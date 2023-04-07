@@ -1,19 +1,37 @@
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from rest_framework import generics, permissions
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
+from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from .models import Blog, Comment
 from .serializers import BlogSerializer, CommentSerializer, UserSerializer
 
 
-class UserRegistrationView(generics.ListCreateAPIView):
+class UserRegistrationView(CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-    def perform_create(self, serializer):
-        user = serializer.save()
-        Token.objects.create(user=user)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            # Hash the password before creating the user
+            password = make_password(serializer.validated_data['password'])
+            serializer.validated_data['password'] = password
+
+            # Create the user
+            self.perform_create(serializer)
+            user = serializer.instance
+
+            # Create a token for the user
+            token, created = Token.objects.get_or_create(user=user)
+
+            return Response({
+                'token': token.key,
+            }, status=201)
+        return Response(serializer.errors, status=400)
 
 
 class BlogList(generics.ListCreateAPIView):
