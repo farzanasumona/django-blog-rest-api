@@ -1,0 +1,1 @@
+This is a sample REST API for a blog website built on django with testcase. It can CRUD the blog posts and the respective comments. It also has a user register mechanism and a security token protocol for the api endpoints.
